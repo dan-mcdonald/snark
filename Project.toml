@@ -1,0 +1,9 @@
+name = "snark"
+uuid = "2cdaaacc-a63a-40b6-86b7-7fc5fdeeeb83"
+authors = ["danie "]
+version = "0.1.0"
+
+[deps]
+Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
