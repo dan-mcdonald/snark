@@ -3,6 +3,9 @@ struct PolyvariatePolynomial{T,N}
     coeffs::Array{T,N}
 end
 
+export domain
+domain(::PolyvariatePolynomial{T,N}) where {T,N} = T
+
 function Base.ndims(::PolyvariatePolynomial{T,N}) where {T,N}
     N
 end
@@ -74,3 +77,6 @@ function simplifyTerms()
     end
     UnivariatePolynomial(univariateCoeffs)
 end
+
+Base.zero(_::PolyvariatePolynomial{T,N}) where {T,N} = zero(T)
+Base.one(_::PolyvariatePolynomial{T,N}) where {T,N} = one(T)

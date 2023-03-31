@@ -1,10 +1,10 @@
 using .Iterators
 
-function SumCheck(g::PolyvariatePolynomial{T,N}) where {T,N} 
-    sum((x) -> eval(g, x), product(repeated((zero(T), one(T)), N)...))
+function SumCheck(g)
+    sum((x) -> eval(g, x), product(repeated((zero(g), one(g)), ndims(g))...))
 end
 
-function SumCheckHonestProver(p2v::Channel, v2p::Channel, g::PolyvariatePolynomial{T,N}) where {T,N}
+function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
     c1 = SumCheck(g)
     println("c1 computed as ", c1)
     put!(p2v, c1)
@@ -12,9 +12,9 @@ function SumCheckHonestProver(p2v::Channel, v2p::Channel, g::PolyvariatePolynomi
     nvars = ndims(g)
     for j in 1:nvars
         println("prover starting round ", j)
-        concatVars = free -> (r..., zero(T), free...)
+        concatVars = free -> (r..., zero(g), free...)
         partialEvalg = vars -> partialEval(g, vars, j)
-        allCombosFreeVars = product(repeated((zero(T), one(T)), nvars - j)...)
+        allCombosFreeVars = product(repeated((zero(g), one(g)), nvars - j)...)
         g_j = UnivariatePolynomial(sum(partialEvalg ∘ concatVars, allCombosFreeVars))
         println("prover sending g_j = ", g_j)
         put!(p2v, g_j)
@@ -24,11 +24,11 @@ function SumCheckHonestProver(p2v::Channel, v2p::Channel, g::PolyvariatePolynomi
     end
 end
 
-function SumCheckVerifier(p2v::Channel, v2p::Channel, g::PolyvariatePolynomial{T,N}) where {T,N}
+function SumCheckVerifier(p2v::Channel, v2p::Channel, g)
     c1 = take!(p2v)
     println("verifier got asserted c1 = ", c1)
     r = ()
-    for j in 1:N
+    for j in 1:ndims(g)
         println("verifier starting round ", j)
         g_j = take!(p2v)
         println("verifier got g_j = ", g_j)
@@ -36,12 +36,12 @@ function SumCheckVerifier(p2v::Channel, v2p::Channel, g::PolyvariatePolynomial{T
             println("verifier detects invalid degree")
             return false
         end
-        if eval(g_j, zero(T)) + eval(g_j, one(T)) != c1
+        if eval(g_j, zero(g)) + eval(g_j, one(g)) != c1
             println("verifier sum does not equal expected value")
             return false
         end
         println("verifier tests pass for g_j")
-        r_j = rand(T)
+        r_j = rand(domain(g))
         r = (r..., r_j)
         println("verifier sending generated r_j = ", r_j)
         put!(v2p, r_j)
@@ -52,7 +52,7 @@ function SumCheckVerifier(p2v::Channel, v2p::Channel, g::PolyvariatePolynomial{T
 end
 
 export SumCheckProtocol
-function SumCheckProtocol(g::PolyvariatePolynomial)
+function SumCheckProtocol(g)
     p2v = Channel()
     v2p = Channel()
     pTask = @async SumCheckHonestProver(p2v, v2p, g)
