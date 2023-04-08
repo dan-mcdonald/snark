@@ -23,7 +23,6 @@ end
 
 function partialEval(sp::SymPoly, xs::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
     subVars = Dict(sp.xs[i] => xs[i] for i = 1:N if i != freeIndex)
-    println("substituting values = ", subVars)
     newPoly = Symbolics.substitute(sp.poly, subVars)
     newXs = Symbolics.get_variables(newPoly)
     SymPoly(newPoly, newXs)
