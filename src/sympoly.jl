@@ -4,11 +4,10 @@ export nvars, SymPoly, degree
 
 struct SymPoly
     poly
-    xs
 end
 
 function nvars(sp::SymPoly)
-    length(sp.xs)
+    length(Symbolics.get_variables(sp.poly))
 end
 
 function eval(sp::SymPoly, xs::Tuple{Vararg{T,N}}) where {T,N}
@@ -22,10 +21,11 @@ function eval(sp::SymPoly, v)
 end
 
 function partialEval(sp::SymPoly, xs::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
-    subVars = Dict(sp.xs[i] => xs[i] for i = 1:N if i != freeIndex)
+    polyVars = Symbolics.get_variables(sp.poly)
+    length(xs) == length(polyVars) || error("partialEval mismatch between SymPoly vars $polyVars and provided values $xs")
+    subVars = Dict(polyVars[i] => xs[i] for i = 1:N if i != freeIndex)
     newPoly = Symbolics.substitute(sp.poly, subVars)
-    newXs = Symbolics.get_variables(newPoly)
-    SymPoly(newPoly, newXs)
+    SymPoly(newPoly)
 end
 
 # TODO you know
@@ -34,7 +34,7 @@ Base.one(::SymPoly) = 1
 
 function Base.:+(a::SymPoly, b::SymPoly)
     sumPoly = a.poly + b.poly
-    SymPoly(sumPoly, Symbolics.get_variables(sumPoly))
+    SymPoly(sumPoly)
 end
 
 varidx(n::Num) = varidx(n.val)
