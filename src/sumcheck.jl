@@ -1,7 +1,7 @@
 using .Iterators
 
 function SumCheck(g)
-    sum((x) -> eval(g, x), product(repeated((zero(g), one(g)), ndims(g))...))
+    sum((x) -> eval(g, x), product(repeated((zero(g), one(g)), nvars(g))...))
 end
 
 function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
@@ -9,13 +9,13 @@ function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
     println("c1 computed as ", c1)
     put!(p2v, c1)
     r = ()
-    nvars = ndims(g)
-    for j in 1:nvars
+    numvars = nvars(g)
+    for j in 1:numvars
         println("prover starting round ", j)
         concatVars = free -> (r..., zero(g), free...)
         partialEvalg = vars -> partialEval(g, vars, j)
-        allCombosFreeVars = product(repeated((zero(g), one(g)), nvars - j)...)
-        g_j = UnivariatePolynomial(sum(partialEvalg ∘ concatVars, allCombosFreeVars))
+        allCombosFreeVars = product(repeated((zero(g), one(g)), numvars - j)...)
+        g_j = sum(partialEvalg ∘ concatVars, allCombosFreeVars)
         println("prover sending g_j = ", g_j)
         put!(p2v, g_j)
         r_j = take!(v2p)
@@ -28,7 +28,7 @@ function SumCheckVerifier(p2v::Channel, v2p::Channel, g)
     c1 = take!(p2v)
     println("verifier got asserted c1 = ", c1)
     r = ()
-    for j in 1:ndims(g)
+    for j in 1:nvars(g)
         println("verifier starting round ", j)
         g_j = take!(p2v)
         println("verifier got g_j = ", g_j)

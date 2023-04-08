@@ -6,10 +6,12 @@ end
 export domain
 domain(::PolyvariatePolynomial{T,N}) where {T,N} = T
 
-function Base.ndims(::PolyvariatePolynomial{T,N}) where {T,N}
+export nvars
+function nvars(::PolyvariatePolynomial{T,N}) where {T,N}
     N
 end
 
+# degree of the j'th free variable
 function degree(g::PolyvariatePolynomial, j)::Int
     size(g.coeffs, j)
 end
@@ -59,7 +61,7 @@ end
 
 function partialEval(f::PolyvariatePolynomial{T,N}, x::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
     simplifiedTerms = map(idx -> simplifyTerm(idx, f.coeffs[idx], x, freeIndex), CartesianIndices(f.coeffs))
-    foldl( 
+    coeffs = foldl( 
         (acc, term) -> begin
             acc[term.degree+1] += term.coeff
             acc
@@ -67,6 +69,7 @@ function partialEval(f::PolyvariatePolynomial{T,N}, x::Tuple{Vararg{T,N}}, freeI
         simplifiedTerms;
         init=zeros(T, maximum(flatten(axes(f.coeffs))))
     )
+    UnivariatePolynomial(coeffs)
 end
 
 function simplifyTerms()
