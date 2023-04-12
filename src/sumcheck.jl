@@ -1,7 +1,13 @@
 using .Iterators
 
 function SumCheck(g)
-    sum((x) -> eval(g, x), product(repeated((zero(g), one(g)), nvars(g))...))
+    valType = domain(g)
+    sum((x) -> eval(g, x), product(repeated((zero(valType), one(valType)), nvars(g))...))
+end
+
+function allCombosFreeVars(g, j)
+    valType = domain(g)
+    product(repeated((zero(valType), one(valType)), nvars(g) - j)...)
 end
 
 function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
@@ -10,12 +16,12 @@ function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
     put!(p2v, c1)
     r = ()
     numvars = nvars(g)
+    valType = domain(g)
     for j in 1:numvars
         println("prover starting round ", j)
-        concatVars = free -> (r..., zero(g), free...)
+        concatVars = free -> (r..., zero(valType), free...)
         partialEvalg = vars -> partialEval(g, vars, j)
-        allCombosFreeVars = product(repeated((zero(g), one(g)), numvars - j)...)
-        g_j = sum(partialEvalg ∘ concatVars, allCombosFreeVars)
+        g_j = sum(partialEvalg ∘ concatVars, allCombosFreeVars(g, j))
         println("prover sending g_j = ", g_j)
         put!(p2v, g_j)
         r_j = take!(v2p)
@@ -25,6 +31,7 @@ function SumCheckHonestProver(p2v::Channel, v2p::Channel, g)
 end
 
 function SumCheckVerifier(p2v::Channel, v2p::Channel, g)
+    valType = domain(g)
     c1 = take!(p2v)
     println("verifier got asserted c1 = ", c1)
     r = ()
@@ -32,14 +39,8 @@ function SumCheckVerifier(p2v::Channel, v2p::Channel, g)
         println("verifier starting round ", j)
         g_j = take!(p2v)
         println("verifier got g_j = ", g_j)
-        if degree(g_j) > degree(g, j)
-            println("verifier detects invalid degree")
-            return false
-        end
-        if eval(g_j, zero(g)) + eval(g_j, one(g)) != c1
-            println("verifier sum does not equal expected value")
-            return false
-        end
+        degree(g_j) <= degree(g, j) || error("verifier detects invalid degree")
+        eval(g_j, zero(valType)) + eval(g_j, one(valType)) == c1 || error("verifier sum does not equal expected value")
         println("verifier tests pass for g_j")
         r_j = rand(domain(g))
         r = (r..., r_j)

@@ -1,86 +1,49 @@
-using Symbolics
+import MultivariatePolynomials as MP
+import TypedPolynomials as TP
 
-export nvars, SymPoly, degree
+export nvars, degree
 
-struct SymPoly
-    poly
+function nvars(sp::TP.Polynomial)
+    MP.nvariables(sp)
 end
 
-function nvars(sp::SymPoly)
-    length(Symbolics.get_variables(sp.poly))
+function value_type(p::TP.Polynomial{T, V1, V2}) where {T,V1,V2}
+    T
 end
 
-function eval(sp::SymPoly, xs::Tuple{Vararg{T,N}}) where {T,N}
-    partialEval(sp, xs, -1).poly
+function eval(sp::TP.Polynomial, xs::Tuple{Vararg{T,N}}) where {T,N}
+    partialEval(sp, xs, -1)
 end
 
-function eval(sp::SymPoly, v)
-    freeVars = Symbolics.get_variables(sp.poly)
-    length(freeVars) == 1 || error("eval expected 1 free var but got: $freeVars")
-    substitute(sp.poly, Dict(freeVars[1] => v))
+# special form for univariate polynomial
+function eval(sp::TP.Polynomial, v)
+    eval(sp, (v,))
 end
 
-function partialEval(sp::SymPoly, xs::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
-    polyVars = Symbolics.get_variables(sp.poly)
-    length(xs) == length(polyVars) || error("partialEval mismatch between SymPoly vars $polyVars and provided values $xs")
-    subVars = Dict(polyVars[i] => xs[i] for i = 1:N if i != freeIndex)
-    newPoly = Symbolics.substitute(sp.poly, subVars)
-    SymPoly(newPoly)
+function partialEval(sp::TP.Polynomial, xs::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
+    nonZeroDegree = v -> MP.maxdegree(sp, v) > 0
+    polyVars = MP.variables(sp) |>
+        collect |>
+        vs -> filter(nonZeroDegree, vs) |>
+        vs -> sort(vs; by=varidx)
+    length(xs) == length(polyVars) || error("partialEval mismatch between polynomial $sp with vars $polyVars and provided values $xs")
+    subVars = [polyVars[i] => xs[i] for i = 1:N if i != freeIndex]
+    TP.subs(sp, subVars...)
 end
 
-# TODO you know
-Base.zero(::SymPoly) = 0
-Base.one(::SymPoly) = 1
-
-function Base.:+(a::SymPoly, b::SymPoly)
-    sumPoly = a.poly + b.poly
-    SymPoly(sumPoly)
+function varidx(v::T) where {T <: MP.AbstractVariable}
+    MP.name_base_indices(v)[2][1]
 end
 
-varidx(n::Num) = varidx(n.val)
-
-function varidx(b)
-    op = operation(b)
-    op == getindex || error("varidx got unexpected operation: $op")
-    args = arguments(b)
-    length(args) == 2 || error("varidx got unexpected arguments: $args")
-    args[2]
+function degree(sp::Union{TP.Polynomial, TP.Monomial, TP.Term})
+    MP.maxdegree(sp)
 end
 
-function degree(sp::SymPoly)
-    degree(sp.poly.val, missing)
+function degree(sp::TP.Polynomial, j)
+    v = filter(v -> [j] == MP.name_base_indices(v)[2], MP.variables(sp))[1]
+    MP.maxdegree(sp, v)
 end
 
-function degree(bs::SymbolicUtils.BasicSymbolic, j)
-    # if istree(bs)
-    degree(Val{operation(bs)}(), arguments(bs), j)
-    # else
-    #     0
-    # end
+function domain(::TP.Polynomial)
+    Int
 end
-
-function degree(_::Val{getindex}, args, j)
-    1
-end
-
-function degree(_::Val{^}, args, j)
-    ismissing(j) || varidx(args[1]) == j ? args[2] : 0
-end
-
-function degree(_::Val{*}, args, j)
-    maximum(x -> degree(x, j), args)
-end
-
-function degree(_::Val{+}, args, j)
-    maximum(x -> degree(x, j), args)
-end
-
-function degree(::Int, j)
-    0
-end
-
-function degree(sp::SymPoly, j)
-    degree(sp.poly.val, j)
-end
-
-domain(::SymPoly) = Int
