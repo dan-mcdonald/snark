@@ -32,3 +32,7 @@ import snark
 @test snark.SumCheck(0x01*x[1]^3 + 0x02*x[2]^2*x[1]^2 + 0x03*x[1]*x[3]^2-0x05) <= 0xff
 
 @test snark.SumCheckProtocol(0x01*x[1]^3 + 0x02*x[2]^2*x[1]^2 + 0x03*x[1]*x[3]^2-0x05)
+
+p251 = n -> PrimeFieldInt{251}(n)
+
+@test snark.SumCheckProtocol(p251(1)*x[1]^3 + p251(2)*x[2]^2*x[1]^2 + p251(3)*x[1]*x[3]^2-p251(5))

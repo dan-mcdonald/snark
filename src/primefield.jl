@@ -8,7 +8,7 @@ struct PrimeFieldInt{T,N}
         if typemax(T) < N-1
             error("type can't represent over the field range")
         elseif !Primes.isprime(N)
-            error("N not prime")
+            error("N=$N not prime")
         end
         new{T,N}(mod(val,N))
     end
@@ -16,6 +16,8 @@ end
 
 Base.zero(::Type{PrimeFieldInt{T,N}}) where {T,N} = PrimeFieldInt{N}(zero(T))
 Base.one(::Type{PrimeFieldInt{T,N}}) where {T,N} = PrimeFieldInt{N}(one(T))
+
+Base.iszero(x::PrimeFieldInt) = iszero(x.val)
 
 # TODO fix bias
 Random.rand(rng::AbstractRNG, ::Random.SamplerType{PrimeFieldInt{T,N}}) where {T,N} = PrimeFieldInt{N}(rand(rng, T))
@@ -36,3 +38,5 @@ Base.:*(a::PrimeFieldInt)::PrimeFieldInt{T,N} = a
 
 # TODO handle overflow
 Base.:+(a::PrimeFieldInt{T,N}, b::PrimeFieldInt{T,N}) where {T,N} = PrimeFieldInt{N}(T(mod(BigInt(a.val)+BigInt(b.val), N)))
+
+Base.:-(x::PrimeFieldInt{T,N}) where {T,N} = PrimeFieldInt{N}(-x.val)
