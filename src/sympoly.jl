@@ -7,31 +7,26 @@ function nvars(sp::TP.Polynomial)
     MP.nvariables(sp)
 end
 
-function value_type(p::TP.Polynomial{T, V1, V2}) where {T,V1,V2}
-    T
-end
-
-function eval(sp::TP.Polynomial, xs::Tuple{Vararg{T,N}}) where {T,N}
+function eval(sp::TP.Polynomial{T,TT,VT}, xs::Tuple{Vararg{T,N}})::T where {T,N,TT,VT}
     partialEval(sp, xs, -1)
 end
 
 # special form for univariate polynomial
-function eval(sp::TP.Polynomial, v)
-    eval(sp, (v,))
+function eval(sp::TP.Polynomial{CoeffType,TermType,VarType}, v)::CoeffType where {CoeffType,TermType,VarType}
+    freeVar = only(MP.variables(sp))
+    sp(freeVar => v)
 end
 
 function partialEval(sp::TP.Polynomial, xs::Tuple{Vararg{T,N}}, freeIndex::Int) where {T,N}
-    nonZeroDegree = v -> MP.maxdegree(sp, v) > 0
-    polyVars = MP.variables(sp) |>
-        collect |>
-        vs -> filter(nonZeroDegree, vs) |>
-        vs -> sort(vs; by=varidx)
-    length(xs) == length(polyVars) || error("partialEval mismatch between polynomial $sp with vars $polyVars and provided values $xs")
-    subVars = [polyVars[i] => xs[i] for i = 1:N if i != freeIndex]
+    zeroDegree = v -> MP.maxdegree(sp, v) == 0
+    isFreeVar = v -> varidx(v) == freeIndex
+    subVars = MP.variables(sp) |>
+        vs -> filter(v -> !zeroDegree(v) && !isFreeVar(v), vs) |>
+        vs -> map(v -> v => xs[varidx(v)], vs)
     TP.subs(sp, subVars...)
 end
 
-function varidx(v::T) where {T <: MP.AbstractVariable}
+function varidx(v::MP.AbstractVariable)
     MP.name_base_indices(v)[2][1]
 end
 
@@ -44,6 +39,6 @@ function degree(sp::TP.Polynomial, j)
     MP.maxdegree(sp, v)
 end
 
-function domain(::TP.Polynomial)
-    Int
+function domain(::TP.Polynomial{CoeffType,TermType,VarType}) where {CoeffType,TermType,VarType}
+    CoeffType
 end

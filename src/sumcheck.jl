@@ -2,7 +2,7 @@ using .Iterators
 
 function SumCheck(g)
     valType = domain(g)
-    sum((x) -> eval(g, x), product(repeated((zero(valType), one(valType)), nvars(g))...))
+    mapreduce((x) -> eval(g, x), +, product(repeated((zero(valType), one(valType)), nvars(g))...))
 end
 
 function allCombosFreeVars(g, j)
@@ -38,16 +38,18 @@ function SumCheckVerifier(p2v::Channel, v2p::Channel, g)
     for j in 1:nvars(g)
         println("verifier starting round ", j)
         g_j = take!(p2v)
-        println("verifier got g_j = ", g_j)
+        println("verifier got g_j = $g_j (type=$(typeof(g_j)))")
         degree(g_j) <= degree(g, j) || error("verifier detects invalid degree")
-        eval(g_j, zero(valType)) + eval(g_j, one(valType)) == c1 || error("verifier sum does not equal expected value")
+        g_j_0 = eval(g_j, zero(valType))
+        g_j_1 = eval(g_j, one(valType))
+        g_j_0 + g_j_1 == c1 || error("verifier g_j(0) ($g_j_0) + g_j(1) ($g_j_1) does not equal expected value c1 = $c1")
         println("verifier tests pass for g_j")
         r_j = rand(domain(g))
         r = (r..., r_j)
         println("verifier sending generated r_j = ", r_j)
         put!(v2p, r_j)
         c1 = eval(g_j, r_j)
-        println("verifier calculated new expected c1 = ", c1)
+        println("verifier calculated new expected c1=$c1 (type=$(typeof(c1)))")
     end
     return true
 end
